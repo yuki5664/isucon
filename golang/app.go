@@ -4,6 +4,9 @@ import (
 	crand "crypto/rand"
 	"fmt"
 	"html/template"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
 	"io"
 	"log"
 	"net/http"
@@ -691,39 +694,91 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/posts/"+strconv.FormatInt(pid, 10), http.StatusFound)
-}
-
-func getImage(w http.ResponseWriter, r *http.Request) {
-	pidStr := chi.URLParam(r, "id")
-	pid, err := strconv.Atoi(pidStr)
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	post := Post{}
-	err = db.Get(&post, "SELECT * FROM `posts` WHERE `id` = ?", pid)
-	if err != nil {
-		log.Print(err)
-		return
-	}
-
-	ext := chi.URLParam(r, "ext")
-
-	if ext == "jpg" && post.Mime == "image/jpeg" ||
-		ext == "png" && post.Mime == "image/png" ||
-		ext == "gif" && post.Mime == "image/gif" {
-		w.Header().Set("Content-Type", post.Mime)
-		_, err := w.Write(post.Imgdata)
-		if err != nil {
-			log.Print(err)
-			return
+	if file != nil {
+		// 投稿のContent-Typeからファイルのタイプを決定する
+		contentType := header.Header["Content-Type"][0]
+		if strings.Contains(contentType, "jpeg") {
+			f, err := os.Create("/home/isucon/private_isu/webapp/golang/public/" + strconv.FormatInt(pid, 10) + ".jpg")
+			if err != nil {
+				session := getSession(r)
+				session.Values["notice"] = err.Error()
+				session.Save(r, w)
+				http.Redirect(w, r, "/", http.StatusFound)
+				return
+			}
+			defer f.Close()
+			file.Seek(0, 0)
+			img, err := jpeg.Decode(file)
+			if err != nil {
+				session := getSession(r)
+				session.Values["notice"] = err.Error()
+				session.Save(r, w)
+				log.Print(err)
+				return
+			}
+			if err = jpeg.Encode(f, img, nil); err != nil {
+				session := getSession(r)
+				session.Values["notice"] = err.Error()
+				session.Save(r, w)
+				log.Print(err)
+				return
+			}
+		} else if strings.Contains(contentType, "png") {
+			f, err := os.Create("/home/isucon/private_isu/webapp/golang/public/" + strconv.FormatInt(pid, 10) + ".png")
+			if err != nil {
+				session := getSession(r)
+				session.Values["notice"] = err.Error()
+				session.Save(r, w)
+				log.Print(err)
+				return
+			}
+			defer f.Close()
+			file.Seek(0, 0)
+			img, err := png.Decode(file)
+			if err != nil {
+				session := getSession(r)
+				session.Values["notice"] = "decode: " + err.Error()
+				session.Save(r, w)
+				log.Print(err)
+				return
+			}
+			if err = png.Encode(f, img); err != nil {
+				session := getSession(r)
+				session.Values["notice"] = "encode: " + err.Error()
+				session.Save(r, w)
+				log.Print(err)
+				return
+			}
+		} else if strings.Contains(contentType, "gif") {
+			f, err := os.Create("/home/isucon/private_isu/webapp/golang/public/" + strconv.FormatInt(pid, 10) + ".gif")
+			if err != nil {
+				session := getSession(r)
+				session.Values["notice"] = err.Error()
+				session.Save(r, w)
+				log.Print(err)
+				return
+			}
+			defer f.Close()
+			file.Seek(0, 0)
+			img, err := gif.Decode(file)
+			if err != nil {
+				session := getSession(r)
+				session.Values["notice"] = err.Error()
+				session.Save(r, w)
+				log.Print(err)
+				return
+			}
+			if err = gif.Encode(f, img, nil); err != nil {
+				session := getSession(r)
+				session.Values["notice"] = err.Error()
+				session.Save(r, w)
+				log.Print(err)
+				return
+			}
 		}
-		return
 	}
 
-	w.WriteHeader(http.StatusNotFound)
+	http.Redirect(w, r, "/posts/"+strconv.FormatInt(pid, 10), http.StatusFound)
 }
 
 func postComment(w http.ResponseWriter, r *http.Request) {
@@ -888,7 +943,6 @@ func main() {
 	r.Get("/posts", getPosts)
 	r.Get("/posts/{id}", getPostsID)
 	r.Post("/", postIndex)
-	r.Get("/image/{id}.{ext}", getImage)
 	r.Post("/comment", postComment)
 	r.Get("/admin/banned", getAdminBanned)
 	r.Post("/admin/banned", postAdminBanned)
