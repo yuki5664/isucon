@@ -771,7 +771,7 @@ func postAdminBanned(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := "UPDATE `users` SET `del_flg` = ? WHERE `id` = ?"
+	query := "UPDATE `users` SET `del_flg` = ? WHERE `id` IN  ( ? )"
 
 	err := r.ParseForm()
 	if err != nil {
@@ -779,9 +779,8 @@ func postAdminBanned(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, id := range r.Form["uid[]"] {
-		db.Exec(query, 1, id)
-	}
+	ids := strings.Join(r.Form["uid[]"], ",")
+	db.Exec(query, 1, ids)
 
 	http.Redirect(w, r, "/admin/banned", http.StatusFound)
 }
