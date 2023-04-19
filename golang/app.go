@@ -771,7 +771,7 @@ func postAdminBanned(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := "UPDATE `users` SET `del_flg` = ? WHERE `id` IN  ( ? )"
+	query := "UPDATE `users` SET `del_flg` = 1 WHERE `id` IN (?)"
 
 	err := r.ParseForm()
 	if err != nil {
@@ -779,8 +779,32 @@ func postAdminBanned(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ids := strings.Join(r.Form["uid[]"], ",")
-	db.Exec(query, 1, ids)
+	// IDが文字列なので、Intに変換
+	idsString := r.Form["uid[]"]
+	idsInt := make([]int, len(idsString))
+	for i, str := range idsString {
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		idsInt[i] = num
+	}
+
+	// プレースホルダーを作成
+	query, args, err := sqlx.In("UPDATE `users` SET `del_flg` = 1 WHERE `id` IN (?);", idsInt)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// プレースホルダーをデータベース固有の形式にリバインド
+	query = db.Rebind(query)
+
+	// SQLを実行
+	_, err = db.Exec(query, args...)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	http.Redirect(w, r, "/admin/banned", http.StatusFound)
 }
