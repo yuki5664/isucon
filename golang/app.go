@@ -698,7 +698,7 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		// 投稿のContent-Typeからファイルのタイプを決定する
 		contentType := header.Header["Content-Type"][0]
 		if strings.Contains(contentType, "jpeg") {
-			f, err := os.Create("/home/isucon/private_isu/webapp/golang/public/" + strconv.FormatInt(pid, 10) + ".jpg")
+			f, err := os.Create("/home/isucon/private_isu/webapp/public/img/" + strconv.FormatInt(pid, 10) + ".jpg")
 			if err != nil {
 				session := getSession(r)
 				session.Values["notice"] = err.Error()
@@ -724,7 +724,7 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		} else if strings.Contains(contentType, "png") {
-			f, err := os.Create("/home/isucon/private_isu/webapp/golang/public/" + strconv.FormatInt(pid, 10) + ".png")
+			f, err := os.Create("/home/isucon/private_isu/webapp/public/img" + strconv.FormatInt(pid, 10) + ".png")
 			if err != nil {
 				session := getSession(r)
 				session.Values["notice"] = err.Error()
@@ -750,7 +750,7 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		} else if strings.Contains(contentType, "gif") {
-			f, err := os.Create("/home/isucon/private_isu/webapp/golang/public/" + strconv.FormatInt(pid, 10) + ".gif")
+			f, err := os.Create("/home/isucon/private_isu/webapp/public/img/" + strconv.FormatInt(pid, 10) + ".gif")
 			if err != nil {
 				session := getSession(r)
 				session.Values["notice"] = err.Error()
