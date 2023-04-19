@@ -191,36 +191,44 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 		}
 
 		// Collect user IDs to retrieve them in a single query later
-		userIDs := make(map[int]bool)
+		var userIDs []int
+		userIDMap := make(map[int]bool)
 		for _, c := range comments {
-			userIDs[c.UserID] = true
-		}
-		userIDsList := make([]int, 0, len(userIDs))
-		for id := range userIDs {
-			userIDsList = append(userIDsList, id)
+			if !userIDMap[c.UserID] {
+				userIDMap[c.UserID] = true
+				userIDs = append(userIDs, c.UserID)
+			}
 		}
 
 		// Retrieve users in a single query
-		users := make(map[int]User)
-		query, args, err := sqlx.In("SELECT * FROM `users` WHERE `id` IN (?) AND `del_flg` = 0", userIDsList)
-		if err != nil {
-			return nil, err
-		}
-		err = db.Select(&users, query, args...)
-		if err != nil {
-			return nil, err
+		var users []User
+		if len(userIDs) > 0 {
+			query, args, err := sqlx.In("SELECT * FROM `users` WHERE `id` IN (?) AND `del_flg` = 0", userIDs)
+			if err != nil {
+				return nil, err
+			}
+			err = db.Select(&users, query, args...)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		// Set comment users
-		for i := range p.Comments {
-			if user, ok := users[p.Comments[i].UserID]; ok {
-				p.Comments[i].User = user
+		for i := range comments {
+			for _, user := range users {
+				if comments[i].UserID == user.ID {
+					comments[i].User = user
+					break
+				}
 			}
 		}
 
 		// Set Post user
-		if user, ok := users[p.UserID]; ok {
-			p.User = user
+		for _, user := range users {
+			if p.UserID == user.ID {
+				p.User = user
+				break
+			}
 		}
 
 		p.Comments = comments
